@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Room</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+<input type="text" id="name" size="80"><br>
+<textarea rows="10" cols="80" id="chatbox"></textarea><br>
+
+<input type="text" id="chat" size="80">
+<button id="btnSend" onclick="sendChat()">send massage</button>
+<script>
+  var socket = io('http://localhost:8080');
+  socket.on('welcome', (data) => {
+    $('#chatbox').append(data.message);
+  });
+
+  socket.on('chat', (data) => {
+    $('#chatbox').append(`\n${data.chatter} : ${data.message}`);
+  });
+
+  function sendChat() {
+    let msg = $('#chat').val();
+    let chatter = $('#name').val();
+    socket.emit('chat', { message: msg, chatter: chatter});
+    $('#chatbox').append('\nme: '.concat(msg));
+  }
+</script>
+</body>
+</html>

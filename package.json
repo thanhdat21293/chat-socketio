@@ -1,0 +1,21 @@
+{
+  "name": "simplesocket",
+  "version": "1.0.0",
+  "description": "Demo Socket.io simple app",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "mocha -S"
+  },
+  "keywords": [
+    "Socket",
+    "demo"
+  ],
+  "author": "Trịnh Minh Cường",
+  "license": "MIT",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "http": "0.0.0",
+    "socket.io": "^1.7.2"
+  }
+}

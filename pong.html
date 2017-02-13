@@ -1,0 +1,8 @@
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  var socket = io('http://localhost:8080');
+  socket.on('ping', (data) => {
+    console.log(data);
+    socket.emit('poong', { msg: 'poong', count: data.count});
+  });
+</script>
