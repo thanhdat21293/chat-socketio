@@ -1,8 +1,122 @@
-<script src="/socket.io/socket.io.js"></script>
+<!--<script src="/socket.io/socket.io.js"></script>
 <script>
   var socket = io('http://localhost:8080');
   socket.on('news', function (data) {
     console.log(data);
     socket.emit('my other event', { my: 'data' });
   });
-</script>
+</script>-->
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+  </head>
+  <body>
+    <div class="containerws">
+      <div class="col_left">
+        <form class="login" action="">
+          Name: <input type="text" name="name" id="name">
+          <input type="submit" name="submit" value="Join">
+        </form>
+        <div class="members">
+
+        </div>
+      </div>
+      <div class="col_right">
+        <div id="messages"></div>
+        <form class="chat" action="">
+          <input id="m" autocomplete="off" /><button>Send</button>
+        </form>
+      </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      $(function () {
+        var socket = io();
+        $('form.login').submit(function(){
+            let name = $('#name').val();
+            socket.emit('adduser', name);
+            $('.login input[type="submit"]').prop('disabled', true);
+            $('.login #name').prop('disabled', true);
+            return false;
+        });
+        socket.on('adduser', function(user){
+            if(user.length > 0) {
+                $('#messages').append($('<li>').text(user));
+            }
+        });
+
+        $('form.chat').submit(function(){
+          socket.emit('chat message', $('#m').val());
+          $('#m').val('');
+          return false;
+        });
+        socket.on('chat message', function(msg){
+            if(msg.length > 0) {
+                $('#messages').append($('<li>').text(msg));
+            }
+        });
+      });
+    </script>
+  <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form.chat { background: #000; padding: 1px 0; bottom: 0; width: 100%; }
+      form.chat input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form.chat button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+        form.login {
+    width: 100%;
+    margin: 0px auto;
+    font-size: 18px;
+}
+
+form.login input[type="text"] {
+    font-size: 20px;
+    width: 190px;
+}
+
+form.login input[type="submit"] {
+    font-size: 16px;
+    /* padding: 17px 19px; */
+    /* width: 71px; */
+    /* height: 38px; */
+    max-height: none;
+    background: green;
+    color: #fff;
+    border: none;
+    vertical-align: top;
+    border-radius: 5px;
+    padding: 5px 10px;
+}
+      .containerws {
+    width: 800px;
+    margin: 70px auto 0;
+}
+
+.col_left {
+    width: 40%;
+    float: left;
+    height: 501px;
+    background: #d9dbf3;
+    padding: 5px;
+}
+
+.col_right {
+    width: 60%;
+    float: right;
+    height: 500px;
+    border: 1px solid #000;
+}
+
+div#messages {
+    max-height: 465px;
+    height: 465px;
+    padding-bottom: 50px;
+}
+    </style>
+  </body>
+</html>

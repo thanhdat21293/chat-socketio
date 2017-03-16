@@ -28,7 +28,7 @@ let message = "";
  * chat: người dùng gửi đoạn chat đến
  */
 io.on('connection', (socket) => {
-  socket.emit('welcome', {message: 'Chào mừng bạn tham gia diễn đàn'});
+  socket.emit('welcome', {message: '<div class="title">Chào mừng bạn tham gia diễn đàn</div>'});
 
   //Don't use message name 'pong'. It is reserved message
   socket.on('chat', (data) => {

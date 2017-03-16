@@ -1,7 +1,7 @@
 {
   "name": "simplesocket",
   "version": "1.0.0",
-  "description": "Demo Socket.io simple app",
+  "description": "Test SocketIO",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -14,8 +14,10 @@
   "author": "Trịnh Minh Cường",
   "license": "MIT",
   "dependencies": {
+    "express": "^4.15.2",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "socket.io": "^1.7.2"
-  }
+  },
+  "repository": "https://github.com/TechMaster/demo-socketio.git"
 }
