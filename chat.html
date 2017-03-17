@@ -11,7 +11,7 @@
     <div class="col_left">
         <form class="login" action="">
             Name: <input type="text" name="name" id="name">
-            <input type="button" id="join" onclick="join()" name="submit" value="Join">
+            <input type="button" onclick="join()" name="submit" id="wsjoin" value="Join">
         </form>
         <div class="members">
 
@@ -79,7 +79,7 @@
 
             //Khi login
             $('#name').prop('disabled', true);
-            $('#join').prop('disabled', true);
+            $('#wsjoin').prop('disabled', true);
             scollBottom();
         } else {
             alert('Bạn chưa nhập tên.');

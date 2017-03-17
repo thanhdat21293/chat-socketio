@@ -1,122 +1,62 @@
-<!--<script src="/socket.io/socket.io.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
 <script>
-  var socket = io('http://localhost:8080');
-  socket.on('news', function (data) {
-    console.log(data);
-    socket.emit('my other event', { my: 'data' });
-  });
-</script>-->
-<!doctype html>
-<html>
-  <head>
-    <title>Socket.IO chat</title>
-  </head>
-  <body>
-    <div class="containerws">
-      <div class="col_left">
-        <form class="login" action="">
-          Name: <input type="text" name="name" id="name">
-          <input type="submit" name="submit" value="Join">
-        </form>
-        <div class="members">
+	var socket = io.connect('http://localhost:8080');
 
-        </div>
-      </div>
-      <div class="col_right">
-        <div id="messages"></div>
-        <form class="chat" action="">
-          <input id="m" autocomplete="off" /><button>Send</button>
-        </form>
-      </div>
-    </div>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-    <script>
-      $(function () {
-        var socket = io();
-        $('form.login').submit(function(){
-            let name = $('#name').val();
-            socket.emit('adduser', name);
-            $('.login input[type="submit"]').prop('disabled', true);
-            $('.login #name').prop('disabled', true);
-            return false;
-        });
-        socket.on('adduser', function(user){
-            if(user.length > 0) {
-                $('#messages').append($('<li>').text(user));
-            }
-        });
+	// on connection to server, ask for user's name with an anonymous callback
+	socket.on('connect', function(){
+		// call the server-side function 'adduser' and send one parameter (value of prompt)
+		socket.emit('adduser', prompt("What's your name?"));
+	});
 
-        $('form.chat').submit(function(){
-          socket.emit('chat message', $('#m').val());
-          $('#m').val('');
-          return false;
-        });
-        socket.on('chat message', function(msg){
-            if(msg.length > 0) {
-                $('#messages').append($('<li>').text(msg));
-            }
-        });
-      });
-    </script>
-  <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form.chat { background: #000; padding: 1px 0; bottom: 0; width: 100%; }
-      form.chat input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      form.chat button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
-        form.login {
-    width: 100%;
-    margin: 0px auto;
-    font-size: 18px;
-}
+	// listener, whenever the server emits 'updatechat', this updates the chat body
+	socket.on('updatechat', function (username, data) {
+		$('#conversation').append('<b>'+username + ':</b> ' + data + '<br>');
+	});
 
-form.login input[type="text"] {
-    font-size: 20px;
-    width: 190px;
-}
+	// listener, whenever the server emits 'updaterooms', this updates the room the client is in
+	socket.on('updaterooms', function(rooms, current_room) {
+		$('#rooms').empty();
+		$.each(rooms, function(key, value) {
+			if(value == current_room){
+				$('#rooms').append('<div>' + value + '</div>');
+			}
+			else {
+				$('#rooms').append('<div><a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></div>');
+			}
+		});
+	});
 
-form.login input[type="submit"] {
-    font-size: 16px;
-    /* padding: 17px 19px; */
-    /* width: 71px; */
-    /* height: 38px; */
-    max-height: none;
-    background: green;
-    color: #fff;
-    border: none;
-    vertical-align: top;
-    border-radius: 5px;
-    padding: 5px 10px;
-}
-      .containerws {
-    width: 800px;
-    margin: 70px auto 0;
-}
+	function switchRoom(room){
+		socket.emit('switchRoom', room);
+	}
 
-.col_left {
-    width: 40%;
-    float: left;
-    height: 501px;
-    background: #d9dbf3;
-    padding: 5px;
-}
+	// on load of page
+	$(function(){
+		// when the client clicks SEND
+		$('#datasend').click( function() {
+			var message = $('#data').val();
+			$('#data').val('');
+			// tell server to execute 'sendchat' and send along one parameter
+			socket.emit('sendchat', message);
+		});
 
-.col_right {
-    width: 60%;
-    float: right;
-    height: 500px;
-    border: 1px solid #000;
-}
+		// when the client hits ENTER on their keyboard
+		$('#data').keypress(function(e) {
+			if(e.which == 13) {
+				$(this).blur();
+				$('#datasend').focus().click();
+			}
+		});
+	});
 
-div#messages {
-    max-height: 465px;
-    height: 465px;
-    padding-bottom: 50px;
-}
-    </style>
-  </body>
-</html>
+</script>
+<div style="float:left;width:100px;border-right:1px solid black;height:300px;padding:10px;overflow:scroll-y;">
+	<b>ROOMS</b>
+	<div id="rooms"></div>
+</div>
+<div style="float:left;width:300px;height:250px;overflow:scroll-y;padding:10px;">
+	<div id="conversation"></div>
+	<input id="data" style="width:200px;" />
+	<input type="button" id="datasend" value="send" />
+</div>
