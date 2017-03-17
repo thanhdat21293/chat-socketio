@@ -1,28 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Chat Room</title>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
+    <meta charset="UTF-8">
+    <title>Chat Room</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-  <div class="containerws">
-      <div class="col_left">
+<div class="containerws">
+    <div class="col_left">
         <form class="login" action="">
-          Name: <input type="text" name="name" id="name">
-          <input type="submit" name="submit" value="Join">
+            Name: <input type="text" name="name" id="name">
+            <input type="button" id="join" onclick="join()" name="submit" value="Join">
         </form>
         <div class="members">
 
         </div>
-      </div>
-      <div class="col_right">
+    </div>
+    <div class="col_right">
         <div id="messages"></div>
         <input type="text" id="chat" size="80">
-        <button id="btnSend" onclick="sendChat()">send massage</button>
-      </div>
+        <button id="btnSend" onclick="sendChat()">Send</button>
     </div>
+</div>
 <!--
 <input type="text" id="name" size="80">
 <textarea rows="10" cols="80" id="chatbox"></textarea>
@@ -31,89 +31,240 @@
 <button id="btnSend" onclick="sendChat()">send massage</button>
   -->
 <script>
-  var socket = io('http://localhost:8080');
-  socket.on('welcome', (data) => {
-    $('#messages').append(data.message);
-  });
+    const socket = io('http://localhost:8080');
+    let log = console.log;
 
-  socket.on('chat', (data) => {
-    $('#messages').append(`<div class="mess"> \n${data.chatter} : ${data.message}`);
-  });
+    socket.on('chat', (data) => {
+        $('#messages').append(`<div class="mess"> \n${data.chatter} : ${data.message}`);
+        scollBottom();
+    });
 
-  function sendChat() {
-    let msg = $('#chat').val();
-    let chatter = $('#name').val();
-    socket.emit('chat', { message: msg, chatter: chatter});
-    $('#messages').append('<div class="mess">\nme: '.concat(msg));
-  }
+    socket.on('join', (data) => {
+        $('#messages').append(`<div class="title1"> \n${data.chatter}`);
+    });
+
+    socket.on('listuser', (data) => {
+        //log('2323');
+        //$('.members').html('');
+        $('.members').append(`<div class="member"> \n${data.username}`);
+    });
+
+
+    function sendChat() {
+        let msg = $('#chat').val();
+        let chatter = $('#name').val();
+        if ($.trim(chatter).length > 0) {
+            if ($.trim(msg).length > 0) {
+                socket.emit('chat', {message: msg, chatter: chatter});
+                $('#chat').val('');
+                $('#messages').append('<div class="mess">\nme: '.concat(msg));
+            }
+        } else {
+            alert('Bạn chưa vào phòng.');
+        }
+    }
+    socket.on('welcome', (data) => {
+        $('#messages').append(data.message);
+    });
+    function join() {
+        let chatter = $('#name').val();
+        if ($.trim(chatter).length > 0) {
+            //Vao phong
+            socket.emit('join', {chatter: chatter + ' đã vào phòng.'});
+            $('#messages').append('<div class="title">Vào phòng thành công.</div>');
+
+            //Khi người dùng login thì sẽ hiển thị ra list user
+            socket.emit('listuser', {username: chatter});
+            $('.members').append(`<div class="member"> \n${chatter}`);
+
+            //Khi login
+            $('#name').prop('disabled', true);
+            $('#join').prop('disabled', true);
+            scollBottom();
+        } else {
+            alert('Bạn chưa nhập tên.');
+        }
+    }
+
+    $("#chat").keyup(function(event){
+        if(event.keyCode == 13){
+            $("#btnSend").click();
+        }
+    });
+
+    let scollBottom = () => {
+        let objDiv = document.getElementById("messages");
+        objDiv.scrollTop = objDiv.scrollHeight;
+    };
 </script>
 
 <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form.chat { background: #000; padding: 1px 0; bottom: 0; width: 100%; }
-      form.chat input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
-      form.chat button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
-        form.login {
-    width: 100%;
-    margin: 0px auto;
-    font-size: 18px;
-}
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
 
-form.login input[type="text"] {
-    font-size: 20px;
-    width: 190px;
-}
+    body {
+        font: 13px Helvetica, Arial;
+    }
 
-form.login input[type="submit"] {
-    font-size: 16px;
-    /* padding: 17px 19px; */
-    /* width: 71px; */
-    /* height: 38px; */
-    max-height: none;
-    background: green;
-    color: #fff;
-    border: none;
-    vertical-align: top;
-    border-radius: 5px;
-    padding: 5px 10px;
-}
-      .containerws {
-    width: 800px;
-    margin: 70px auto 0;
-}
+    form.chat {
+        background: #000;
+        padding: 1px 0;
+        bottom: 0;
+        width: 100%;
+    }
 
-.col_left {
-    width: 40%;
+    form.chat input {
+        border: 0;
+        padding: 10px;
+        width: 90%;
+        margin-right: .5%;
+    }
+
+    form.chat button {
+        width: 9%;
+        background: rgb(130, 224, 255);
+        border: none;
+        padding: 10px;
+    }
+
+    #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    #messages li {
+        padding: 5px 10px;
+    }
+
+    #messages li:nth-child(odd) {
+        background: #eee;
+    }
+
+    form.login {
+        width: 100%;
+        margin: 0px auto;
+        font-size: 18px;
+    }
+
+    form.login input[type="text"] {
+        font-size: 20px;
+        width: 190px;
+    }
+
+    form.login input[type="submit"] {
+        font-size: 16px;
+        /* padding: 17px 19px; */
+        /* width: 71px; */
+        /* height: 38px; */
+        max-height: none;
+        background: green;
+        color: #fff;
+        border: none;
+        vertical-align: top;
+        border-radius: 5px;
+        padding: 5px 10px;
+    }
+
+    .containerws {
+        width: 800px;
+        margin: 70px auto 0;
+    }
+
+    .col_left {
+        width: 40%;
+        float: left;
+        height: 501px;
+        background: #d9dbf3;
+        padding: 5px;
+    }
+
+    .col_right {
+        width: 60%;
+        float: right;
+        height: 500px;
+        border: 1px solid #000;
+    }
+
+    div#messages {
+        max-height: 465px;
+        height: 465px;
+        padding-bottom: 50px;
+        overflow-y: auto;
+    }
+
+    .title {
+        background: #7136e6;
+        color: #fff;
+        padding: 5px 10px;
+    }
+
+    .mess {
+        padding: 5px 10px;
+    }
+
+    .title1 {
+        background: #64e243;
+        color: #fff;
+        padding: 5px 10px;
+    }
+    input#chat {
+    width: calc(100% - 62px);
     float: left;
-    height: 501px;
-    background: #d9dbf3;
-    padding: 5px;
+    border: 1px solid #5600ff;
+    padding: 9px 10px 10px;
+    border-left: none;
 }
 
-.col_right {
-    width: 60%;
-    float: right;
-    height: 500px;
-    border: 1px solid #000;
-}
-
-div#messages {
-    max-height: 465px;
-    height: 465px;
-    padding-bottom: 50px;
-}
-  .title {
-    background: #7136e6;
+button#btnSend {
+    background: #5600ff;
+    padding: 9px 15px;
     color: #fff;
-    padding: 5px 10px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    width: 62px;
 }
-.mess {
+    .member {
     padding: 5px 10px;
+    font-size: 14px;
+    font-family: cursive;
+    list-style-type: decimal;
+    display: list-item;
+    margin-left: 24px;
+    position: relative;
+    /* border-bottom: 1px solid #fff; */
 }
-    </style>
+
+.members {
+    margin-top: 20px;
+}
+
+.member a {
+    position: relative;
+    z-index: 1;
+    text-decoration: none;
+}
+
+.member:after {
+    content: "";
+    width: calc(100% + 24px);
+    height: 1px;
+    background: #fff;
+    position: absolute;
+    left: -24px;
+    bottom: 0;
+}
+
+.member:last-child:after {
+    height: 0;
+}
+    .mess:nth-child(2n) {
+    background: #f7f1f1;
+}
+</style>
 </body>
 </html>
