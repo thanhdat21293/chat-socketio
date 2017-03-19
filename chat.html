@@ -13,6 +13,9 @@
             Name: <input type="text" name="name" id="name">
             <input type="button" onclick="join()" name="submit" id="wsjoin" value="Join">
         </form>
+        <div id="rooms">
+
+        </div>
         <div class="members">
 
         </div>
@@ -34,14 +37,25 @@
     const socket = io('http://localhost:8080');
     let log = console.log;
 
-    socket.on('chat', (data) => {
-        $('#messages').append(`<div class="mess"> \n${data.chatter} : ${data.message}`);
+    socket.on('chat', (name, data) => {
+        $('#messages').append(`<div class="mess"> \n${name} : ${data.message}`);
         scollBottom();
     });
 
-    socket.on('join', (data) => {
+    socket.on('join', (name, data) => {
+        let chatter = $('#name').val();
+
         $('#messages').append(`<div class="title1"> \n${data.chatter}`);
+        //socket.emit('adduser', chatter);
     });
+
+    socket.on('nologin', (data) => {
+        alert('Bạn chưa vào join.');
+    });
+
+    socket.on('updatechat', function (username, data) {
+		$('#messages').append('<div class="title1"> <b>' + username + '</b>' + data + '</div>');
+	});
 
     socket.on('listuser', (data) => {
         //log('2323');
@@ -49,6 +63,21 @@
         $('.members').append(`<div class="member"> \n${data.username}`);
     });
 
+    socket.on('updaterooms', function(rooms, current_room) {
+		$('#rooms').empty();
+		$.each(rooms, function(key, value) {
+			if(value == current_room){
+				$('#rooms').append('<div>' + value + '</div>');
+			}
+			else {
+				$('#rooms').append('<div><a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></div>');
+			}
+		});
+	});
+
+    function switchRoom(room){
+		socket.emit('switchRoom', room);
+	}
 
     function sendChat() {
         let msg = $('#chat').val();
@@ -57,7 +86,7 @@
             if ($.trim(msg).length > 0) {
                 socket.emit('chat', {message: msg, chatter: chatter});
                 $('#chat').val('');
-                $('#messages').append('<div class="mess">\nme: '.concat(msg));
+                //$('#messages').append('<div class="mess">\nme: '.concat(msg));
             }
         } else {
             alert('Bạn chưa vào phòng.');
@@ -70,7 +99,7 @@
         let chatter = $('#name').val();
         if ($.trim(chatter).length > 0) {
             //Vao phong
-            socket.emit('join', {chatter: chatter + ' đã vào phòng.'});
+            socket.emit('join', chatter);
             $('#messages').append('<div class="title">Vào phòng thành công.</div>');
 
             //Khi người dùng login thì sẽ hiển thị ra list user
