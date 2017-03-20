@@ -10,14 +10,20 @@
 <div class="containerws">
     <div class="col_left">
         <form class="login" action="">
-            Name: <input type="text" name="name" id="name">
-            <input type="button" onclick="join()" name="submit" id="wsjoin" value="Join">
+            <input type="text" name="name" id="name" placeholder="Nhập tên của bạn">
+            <input type="button" onclick="join()" name="submit" id="wsjoin" value="Đăng nhập">
         </form>
         <div id="rooms">
+            <h3>Phòng chat</h3>
+            <div class="group_room">
 
+            </div>
         </div>
         <div class="members">
+            <h3>Người dùng</h3>
+            <div class="group_members">
 
+            </div>
         </div>
     </div>
     <div class="col_right">
@@ -26,97 +32,106 @@
         <button id="btnSend" onclick="sendChat()">Send</button>
     </div>
 </div>
-<!--
-<input type="text" id="name" size="80">
-<textarea rows="10" cols="80" id="chatbox"></textarea>
-
-<input type="text" id="chat" size="80">
-<button id="btnSend" onclick="sendChat()">send massage</button>
-  -->
 <script>
     const socket = io('http://localhost:8080');
     let log = console.log;
 
     socket.on('chat', (name, data) => {
-        $('#messages').append(`<div class="mess"> \n${name} : ${data.message}`);
-        scollBottom();
+        $('#messages').append(`<div class="mess 111"> \n${name} : ${data.message}`);
     });
 
     socket.on('join', (name, data) => {
         let chatter = $('#name').val();
 
         $('#messages').append(`<div class="title1"> \n${data.chatter}`);
-        //socket.emit('adduser', chatter);
     });
 
     socket.on('nologin', (data) => {
-        alert('Bạn chưa vào join.');
+        alert('Bạn chưa đăng nhập.');
     });
 
     socket.on('updatechat', function (username, data) {
-		$('#messages').append('<div class="title1"> <b>' + username + '</b>' + data + '</div>');
-	});
-
-    socket.on('listuser', (data) => {
-        //log('2323');
-        //$('.members').html('');
-        $('.members').append(`<div class="member"> \n${data.username}`);
+        $('#messages').append('<div class="title1"> <b>' + username + '</b>' + data + '</div>');
     });
 
-    socket.on('updaterooms', function(rooms, current_room) {
-		$('#rooms').empty();
-		$.each(rooms, function(key, value) {
-			if(value == current_room){
-				$('#rooms').append('<div>' + value + '</div>');
-			}
-			else {
-				$('#rooms').append('<div><a href="#" onclick="switchRoom(\''+value+'\')">' + value + '</a></div>');
-			}
-		});
-	});
+    socket.on('listuser', (usernames, data) => {
+        let idCurrent = socket.id;
+        $('.members .group_members').html('');
+        let d = 0;
+        for (let id in usernames) {
+            let name = usernames[id];
+            if (d > 0) {
+                $('.members .group_members').append('<div class="user user_' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + idCurrent + '_' + id + '\')" >Chat</a></div>');
+            } else {
+                $('.members .group_members').append('<div class="user user_' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + id + '_' + idCurrent + '\')" >Chat</a></div>');
+                if (idCurrent === id) {
+                    d = 1;
+                }
+            }
+        }
 
-    function switchRoom(room){
-		socket.emit('switchRoom', room);
-	}
+    });
+
+    socket.on('updaterooms', function (rooms, current_room) {
+        $('#rooms .group_room').empty();
+        $.each(rooms, function (key, value) {
+            if (value == current_room) {
+                $('#rooms .group_room').append('<div  class="room">' + value + '</div>');
+            }
+            else {
+                $('#rooms .group_room').append('<div class="room">' + value + '<a href="#" class="button_join" onclick="switchRoom(\'' + value + '\')">Vào</a></div>');
+            }
+        });
+    });
+
+    function switchRoom(room) {
+        $(this).remove();
+        $('#messages').html('');
+        socket.emit('switchRoom', room);
+    }
+
+    $(document).on('click', '.button_join', function () {
+        $('.button_join').removeClass('hidden');
+        $(this).addClass('hidden');
+    })
 
     function sendChat() {
         let msg = $('#chat').val();
         let chatter = $('#name').val();
         if ($.trim(chatter).length > 0) {
             if ($.trim(msg).length > 0) {
-                socket.emit('chat', {message: msg, chatter: chatter});
+                socket.emit('chat', {message: msg});
                 $('#chat').val('');
-                //$('#messages').append('<div class="mess">\nme: '.concat(msg));
+                $('#messages').append('<div class="mess">\nme: '.concat(msg));
             }
         } else {
             alert('Bạn chưa vào phòng.');
         }
     }
-    socket.on('welcome', (data) => {
-        $('#messages').append(data.message);
-    });
+
     function join() {
         let chatter = $('#name').val();
         if ($.trim(chatter).length > 0) {
+
             //Vao phong
             socket.emit('join', chatter);
             $('#messages').append('<div class="title">Vào phòng thành công.</div>');
 
             //Khi người dùng login thì sẽ hiển thị ra list user
             socket.emit('listuser', {username: chatter});
-            $('.members').append(`<div class="member"> \n${chatter}`);
 
             //Khi login
             $('#name').prop('disabled', true);
             $('#wsjoin').prop('disabled', true);
+
             scollBottom();
         } else {
             alert('Bạn chưa nhập tên.');
         }
     }
 
-    $("#chat").keyup(function(event){
-        if(event.keyCode == 13){
+    $("#chat").keyup(function (event) {
+        if (event.keyCode == 13) {
             $("#btnSend").click();
         }
     });
@@ -177,38 +192,39 @@
         width: 100%;
         margin: 0px auto;
         font-size: 18px;
+        border: 1px solid #ccc;
+        padding: 5px;
+        margin-bottom: 20px;
     }
 
     form.login input[type="text"] {
         font-size: 20px;
-        width: 190px;
+        width: 204px;
     }
 
-    form.login input[type="submit"] {
+    form.login input[type="button"] {
         font-size: 16px;
         /* padding: 17px 19px; */
         /* width: 71px; */
         /* height: 38px; */
         max-height: none;
-        background: green;
+        background: #5f45c5;
         color: #fff;
         border: none;
         vertical-align: top;
-        border-radius: 5px;
-        padding: 5px 10px;
+        /* border-radius: 5px; */
+        padding: 4px 10px;
     }
 
     .containerws {
-        width: 800px;
+        width: 900px;
         margin: 70px auto 0;
     }
 
     .col_left {
-        width: 40%;
+        width: 36%;
         float: left;
         height: 501px;
-        background: #d9dbf3;
-        padding: 5px;
     }
 
     .col_right {
@@ -240,60 +256,124 @@
         color: #fff;
         padding: 5px 10px;
     }
+
     input#chat {
-    width: calc(100% - 62px);
-    float: left;
-    border: 1px solid #5600ff;
-    padding: 9px 10px 10px;
-    border-left: none;
-}
+        width: calc(100% - 62px);
+        float: left;
+        border: 1px solid #5600ff;
+        padding: 9px 10px 10px;
+        border-left: none;
+    }
 
-button#btnSend {
-    background: #5600ff;
-    padding: 9px 15px;
-    color: #fff;
-    font-size: 13px;
-    border: none;
-    cursor: pointer;
-    width: 62px;
-}
+    button#btnSend {
+        background: #5600ff;
+        padding: 9px 15px;
+        color: #fff;
+        font-size: 13px;
+        border: none;
+        cursor: pointer;
+        width: 62px;
+    }
+
     .member {
-    padding: 5px 10px;
-    font-size: 14px;
-    font-family: cursive;
-    list-style-type: decimal;
-    display: list-item;
-    margin-left: 24px;
-    position: relative;
-    /* border-bottom: 1px solid #fff; */
-}
+        padding: 5px 10px;
+        font-size: 14px;
+        font-family: cursive;
+        list-style-type: decimal;
+        display: list-item;
+        margin-left: 24px;
+        position: relative;
+        /* border-bottom: 1px solid #fff; */
+    }
 
-.members {
-    margin-top: 20px;
-}
+    .members {
+        margin-top: 20px;
+    }
 
-.member a {
-    position: relative;
-    z-index: 1;
-    text-decoration: none;
-}
+    .member a {
+        position: relative;
+        z-index: 1;
+        text-decoration: none;
+    }
 
-.member:after {
-    content: "";
-    width: calc(100% + 24px);
-    height: 1px;
-    background: #fff;
-    position: absolute;
-    left: -24px;
-    bottom: 0;
-}
+    .member:after {
+        content: "";
+        width: calc(100% + 24px);
+        height: 1px;
+        background: #fff;
+        position: absolute;
+        left: -24px;
+        bottom: 0;
+    }
 
-.member:last-child:after {
-    height: 0;
-}
+    .member:last-child:after {
+        height: 0;
+    }
+
     .mess:nth-child(2n) {
-    background: #f7f1f1;
-}
+        background: #f7f1f1;
+    }
+
+    div#rooms {
+        /* border: 1px solid #ccc; */
+    }
+
+    div#rooms h3 {
+        background: #ff0303;
+        color: #fff;
+        padding: 5px 10px;
+        font-weight: normal;
+        font-family: cursive;
+    }
+
+    .group_room {
+        border: 1px solid #ccc;
+        border-top: none;
+        padding: 5px 10px;
+    }
+
+    div.members h3 {
+        background: #ff0303;
+        color: #fff;
+        padding: 5px 10px;
+        font-weight: normal;
+        font-family: cursive;
+    }
+
+    .group_members {
+        border: 1px solid #ccc;
+        padding: 5px 10px;
+    }
+
+    .user {
+        padding: 5px 0;
+        overflow: hidden;
+        line-height: 20px;
+    }
+
+    .room {
+        padding: 5px 0;
+        overflow: hidden;
+        line-height: 20px;
+    }
+
+    a.button_join {
+        display: inline-block;
+        float: right;
+        text-decoration: none;
+        background: #000000;
+        width: 50px;
+        text-align: center;
+        line-height: 20px;
+        color: #fff;
+    }
+
+    a.button_join.hidden {
+        opacity: 0;
+        display: none;
+        pointer-events: none;
+    }
+
 </style>
 </body>
 </html>

@@ -7,103 +7,106 @@ const fs = require('fs');
 const ios = require('socket.io-express-session');
 
 app.listen(8080, () => {
-  console.log('Chat server listens at port 8080');
+    console.log('Chat server listens at port 8080');
 });
 
 
 let log = console.log;
 function handler(req, res) {
-  fs.readFile(__dirname + '/chat.html', (err, data) => {
-    if (err) {
-      res.writeHead(500);
-      return res.end('Error loading chat.html');
-    }
+    fs.readFile(__dirname + '/chat.html', (err, data) => {
+        if (err) {
+            res.writeHead(500);
+            return res.end('Error loading chat.html');
+        }
 
-    res.writeHead(200);
-    res.end(data);
-  });
+        res.writeHead(200);
+        res.end(data);
+    });
 }
-
-
 
 
 let message = "";
 /***
  * Danh sách các message
- * welcome: chào mừng người dùng tham gia chat room
  * chat: người dùng gửi đoạn chat đến
- * join: Người dùng vào phòng
+ * join: Người dùng đăng nhập, mặc định vào room1
+ * switchRoom: Người dùng chọn room
+ * socket.broadcast.in(socket.room).emit() : Thực hiện lệnh cho tất cả user (Trừ user hiện tại)
+ * io.sockets.in(socket.room).emit() : Thực hiện lệnh cho tất cả user (Kể cả user hiện tại)
  */
 
-// usernames which are currently connected to the chat
-var usernames = {};
+let usernames = {};
 
-// rooms which are currently available in chat
-var rooms = ['room1', 'room2'];
+let rooms = ['all'];
 
 
 io.on('connection', (socket) => {
-  //console.log(socket.id) // ID user khi load trang, mỗi lần load là 1 ID
+    //console.log(socket.id) // ID user khi load trang, mỗi lần load là 1 ID
 
 
-  socket.on('join', function(username){
+    socket.on('join', function (username) {
         // Lưu username vào socket session
         socket.username = username;
+        socket.room = 'all';
 
-        socket.room = 'room1';
+        usernames[socket.id] = username;
 
-        usernames[username] = username;
+        socket.join('all');
 
-        socket.join('room1');
+        socket.broadcast.to(socket.room).emit('updatechat', username, ' đã vào phòng All');
 
-        // echo to client they've connected
-        socket.emit('updatechat', 'Bạn', ' vào phòng room1');
+        socket.emit('updatechat', 'Bạn', ' vào phòng chat All');
 
-        // echo to room 1 that a person has connected to their room
-        socket.emit('updaterooms', rooms, 'room1');
+        socket.emit('updaterooms', rooms, 'all');
 
-        //socket.broadcast.emit('join', data);
     });
 
-  socket.on('switchRoom', function(newroom){
-      socket.leave(socket.room);
-      socket.join(newroom);
-      socket.emit('updatechat', 'Bạn', ' vào phòng '+ newroom);
-      // sent message to OLD room
-      socket.broadcast.to(socket.room).emit('updatechat', socket.username, ' thoát khỏi phòng');
-      // update socket session room title
-      socket.room = newroom;
-      socket.broadcast.to(newroom).emit('updatechat', socket.username, ' vào phòng');
-      socket.emit('updaterooms', rooms, newroom);
-  });
+    socket.on('switchRoom', function (newroom) {
+        socket.leave(socket.room);
+        socket.join(newroom);
+        if (usernames[newroom] != undefined) {
+            socket.emit('updatechat', 'Bạn', ' chat riêng với ' + socket.username);
 
-  //Don't use message name 'pong'. It is reserved message
-  socket.on('chat', (data) => {
+            // Gửi tin nhắn cho room vừa thoát
+            socket.broadcast.to(socket.room).emit('updatechat', socket.username, ' rời phòng.');
+
+            socket.room = newroom;
+            socket.broadcast.to(newroom).emit('updatechat', socket.username, ' muốn chat riêng với bạn.');
+        } else {
+            socket.emit('updatechat', 'Bạn', ' đã vào phòng.');
+
+            // Gửi tin nhắn cho room vừa thoát
+            socket.broadcast.to(socket.room).emit('updatechat', socket.username, ' rời phòng.');
+
+            socket.room = newroom;
+            socket.broadcast.to(newroom).emit('updatechat', socket.username, ' vào phòng.');
+        }
+
+        socket.emit('updaterooms', rooms, newroom);
+    });
+
+    socket.on('chat', (data) => {
         //log(io.sockets.sockets[socket]);
-    let name = socket.username;
-    //console.log(data);
-    //To broadcast, simply add a broadcast flag to emit and send method calls.
-    //Broadcasting means sending a message to everyone else except for the socket that starts it.
+        let name = socket.username;
 
-      if(name) {
-          //socket.broadcast.emit('chat', name, data);
-          io.sockets.in(socket.room).emit('chat', socket.username, data);
-      }else{
-          socket.emit('nologin', data);
-      }
-     //io.sockets.in(socket.room).emit('chat', socket.username, data);
-  });
-/*
-  socket.on('join', (data) => {
-    socket.broadcast.emit('join', data);
-  });
-*/
-  socket.on('listuser', (data) => {
-    socket.broadcast.emit('listuser', data);
-  });
+        if (name) {
+            socket.broadcast.in(socket.room).emit('chat', name, data);
+        } else {
+            socket.emit('nologin', data);
+        }
+    });
 
-  socket.on('disconnect', (data) => {
-    log('user disconnected');
-  });
+    socket.on('listuser', (data) => {
+        /* let allConnectedClients = io.sockets.connected;*/
+        //let clientsCount = io.engine.clientsCount ; // Dem user
+        io.sockets.emit('listuser', usernames, data);
+    });
+
+    socket.on('disconnect', (data) => {
+        delete usernames[socket.id];
+        //let clientsCount = io.engine.clientsCount ; // Dem user
+        socket.broadcast.emit('listuser', usernames, data);
+        log('user disconnected');
+    });
 
 });
