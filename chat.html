@@ -5,22 +5,32 @@
     <title>Chat Room</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <!--<link rel="stylesheet" type="text/html" href="style.css">-->
 </head>
 <body>
 <div class="containerws">
     <div class="col_left">
-        <form class="login" action="">
-            <input type="text" name="name" id="name" placeholder="Nhập tên của bạn">
-            <input type="button" onclick="join()" name="submit" id="wsjoin" value="Đăng nhập">
-        </form>
-        <div id="rooms">
+        <div class="wsbox formlogin">
+            <h3>Đăng nhập</h3>
+            <form class="login" action="">
+                <input type="text" name="name" id="name" placeholder="Nhập tên của bạn">
+                <input type="button" onclick="join()"  id="wsjoin" value="Đăng nhập">
+            </form>
+        </div>
+        <div id="rooms" class="wsbox">
             <h3>Phòng chat</h3>
             <div class="group_room">
 
             </div>
         </div>
-        <div class="members">
-            <h3>Người dùng</h3>
+        <div class="roomMembers wsbox">
+            <h3>Người dùng trong phòng <span>All</span></h3>
+            <div class="group_roomMembers">
+
+            </div>
+        </div>
+        <div class="members wsbox">
+            <h3>Tất cả người dùng</h3>
             <div class="group_members">
 
             </div>
@@ -28,32 +38,45 @@
     </div>
     <div class="col_right">
         <div id="messages"></div>
-        <input type="text" id="chat" size="80">
-        <button id="btnSend" onclick="sendChat()">Send</button>
+        <input type="text" id="chat" size="80" placeholder="Nhập nội dung chat ở đây..">
+        <button id="btnSend" onclick="sendChat()">Gửi</button>
     </div>
 </div>
 <script>
-    const socket = io('http://localhost:8080');
+    const socket = io('http://192.168.1.101:8080');
     let log = console.log;
-
     socket.on('chat', (name, data) => {
         $('#messages').append(`<div class="mess 111"> \n${name} : ${data.message}`);
+        scollBottom();
     });
-
     socket.on('join', (name, data) => {
         let chatter = $('#name').val();
-
         $('#messages').append(`<div class="title1"> \n${data.chatter}`);
     });
-
     socket.on('nologin', (data) => {
+        $('#messages').html('');
         alert('Bạn chưa đăng nhập.');
     });
+    socket.on('samename', (username, check) => {
+        if (check === 1) {
+            //Vao phong
+            $('#messages').append('<div class="title">Vào phòng thành công.</div>');
+            $('.login').hide();
+            $('.formlogin').addClass('login');
+            $('.formlogin h3').text('Đang đăng nhập với : ' + username);
 
+            //Khi người dùng login thì sẽ hiển thị ra list user
+            socket.emit('listuser', username);
+            //Khi login
+            $('#name').prop('disabled', true);
+            $('#wsjoin').prop('disabled', true);
+        } else {
+            alert('Tên đã tồn tại.');
+        }
+    });
     socket.on('updatechat', function (username, data) {
         $('#messages').append('<div class="title1"> <b>' + username + '</b>' + data + '</div>');
     });
-
     socket.on('listuser', (usernames, data) => {
         let idCurrent = socket.id;
         $('.members .group_members').html('');
@@ -61,17 +84,34 @@
         for (let id in usernames) {
             let name = usernames[id];
             if (d > 0) {
-                $('.members .group_members').append('<div class="user user_' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + idCurrent + '_' + id + '\')" >Chat</a></div>');
+                $('.members .group_members').append('<div class="user user_' + id + '" rel="' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + idCurrent + '_' + id + '\', \'' + id + '\')" >Chat</a></div>');
             } else {
-                $('.members .group_members').append('<div class="user user_' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + id + '_' + idCurrent + '\')" >Chat</a></div>');
                 if (idCurrent === id) {
                     d = 1;
+                } else {
+                    $('.members .group_members').append('<div class="user user_' + id + '" rel="' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + id + '_' + idCurrent + '\', \'' + id + '\')" >Chat</a></div>');
                 }
             }
         }
-
     });
-
+    socket.on('sameroom', (usernames, clients, room) => {
+        let idCurrent = socket.id;
+        $('.roomMembers .group_roomMembers').html('');
+        let d = 0;
+        $('.roomMembers h3 span').text(room);
+        clients.forEach(function(id) {
+            let name = usernames[id];
+            if (d > 0) {
+                $('.roomMembers .group_roomMembers').append('<div class="user user_' + id + '" rel="' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + idCurrent + '_' + id + '\', \'' + id + '\')" >Chat</a></div>');
+            } else {
+                if (idCurrent === id) {
+                    d = 1;
+                } else {
+                    $('.roomMembers .group_roomMembers').append('<div class="user user_' + id + ' ' + id + '" rel="' + id + '">' + name + '<a class="button_join" href="#" onclick="switchRoom(\'' + id + '_' + idCurrent + '\', \'' + id + '\')" >Chat</a></div>');
+                }
+            }
+        });
+    });
     socket.on('updaterooms', function (rooms, current_room) {
         $('#rooms .group_room').empty();
         $.each(rooms, function (key, value) {
@@ -83,18 +123,25 @@
             }
         });
     });
-
-    function switchRoom(room) {
+    function switchRoom(room, idUser) {
         $(this).remove();
         $('#messages').html('');
-        socket.emit('switchRoom', room);
+
+        if(idUser){
+            socket.emit('switchRoom', room, idUser);
+            $('.roomMembers').addClass('hidden');
+        }else{
+            $('.roomMembers').removeClass('hidden');
+            socket.emit('switchRoom', room);
+        }
+        return false;
     }
-
     $(document).on('click', '.button_join', function () {
+        let rel = $(this).parent('div').attr('rel');
         $('.button_join').removeClass('hidden');
-        $(this).addClass('hidden');
-    })
-
+        log('user_' + rel);
+        $('.user_' + rel).children('.button_join').addClass('hidden');
+    });
     function sendChat() {
         let msg = $('#chat').val();
         let chatter = $('#name').val();
@@ -103,42 +150,34 @@
                 socket.emit('chat', {message: msg});
                 $('#chat').val('');
                 $('#messages').append('<div class="mess">\nme: '.concat(msg));
+                scollBottom();
             }
         } else {
             alert('Bạn chưa vào phòng.');
         }
     }
-
     function join() {
         let chatter = $('#name').val();
         if ($.trim(chatter).length > 0) {
-
-            //Vao phong
             socket.emit('join', chatter);
-            $('#messages').append('<div class="title">Vào phòng thành công.</div>');
-
-            //Khi người dùng login thì sẽ hiển thị ra list user
-            socket.emit('listuser', {username: chatter});
-
-            //Khi login
-            $('#name').prop('disabled', true);
-            $('#wsjoin').prop('disabled', true);
-
-            scollBottom();
         } else {
             alert('Bạn chưa nhập tên.');
         }
     }
-
     $("#chat").keyup(function (event) {
         if (event.keyCode == 13) {
             $("#btnSend").click();
         }
     });
-
+    $("#name").keyup(function (event) {
+        if (event.keyCode == 13) {
+            $("#wsjoin").click();
+        }
+    });
     let scollBottom = () => {
         let objDiv = document.getElementById("messages");
         objDiv.scrollTop = objDiv.scrollHeight;
+        return false;
     };
 </script>
 
@@ -148,46 +187,38 @@
         padding: 0;
         box-sizing: border-box;
     }
-
     body {
         font: 13px Helvetica, Arial;
     }
-
     form.chat {
         background: #000;
         padding: 1px 0;
         bottom: 0;
         width: 100%;
     }
-
     form.chat input {
         border: 0;
         padding: 10px;
         width: 90%;
         margin-right: .5%;
     }
-
     form.chat button {
         width: 9%;
         background: rgb(130, 224, 255);
         border: none;
         padding: 10px;
     }
-
     #messages {
         list-style-type: none;
         margin: 0;
         padding: 0;
     }
-
     #messages li {
         padding: 5px 10px;
     }
-
     #messages li:nth-child(odd) {
         background: #eee;
     }
-
     form.login {
         width: 100%;
         margin: 0px auto;
@@ -196,12 +227,10 @@
         padding: 5px;
         margin-bottom: 20px;
     }
-
     form.login input[type="text"] {
         font-size: 20px;
         width: 204px;
     }
-
     form.login input[type="button"] {
         font-size: 16px;
         /* padding: 17px 19px; */
@@ -215,48 +244,41 @@
         /* border-radius: 5px; */
         padding: 4px 10px;
     }
-
     .containerws {
         width: 900px;
         margin: 70px auto 0;
     }
-
     .col_left {
         width: 36%;
         float: left;
         height: 501px;
     }
-
     .col_right {
         width: 60%;
         float: right;
         height: 500px;
         border: 1px solid #000;
     }
-
     div#messages {
         max-height: 465px;
         height: 465px;
         padding-bottom: 50px;
         overflow-y: auto;
     }
-
     .title {
         background: #7136e6;
         color: #fff;
         padding: 5px 10px;
     }
-
     .mess {
         padding: 5px 10px;
+        word-wrap: break-word;
     }
-
     .title1 {
         background: #64e243;
         color: #fff;
         padding: 5px 10px;
     }
-
     input#chat {
         width: calc(100% - 62px);
         float: left;
@@ -264,7 +286,6 @@
         padding: 9px 10px 10px;
         border-left: none;
     }
-
     button#btnSend {
         background: #5600ff;
         padding: 9px 15px;
@@ -274,7 +295,6 @@
         cursor: pointer;
         width: 62px;
     }
-
     .member {
         padding: 5px 10px;
         font-size: 14px;
@@ -285,17 +305,14 @@
         position: relative;
         /* border-bottom: 1px solid #fff; */
     }
-
-    .members {
-        margin-top: 20px;
+    .wsbox {
+        margin-bottom: 20px;
     }
-
     .member a {
         position: relative;
         z-index: 1;
         text-decoration: none;
     }
-
     .member:after {
         content: "";
         width: calc(100% + 24px);
@@ -305,19 +322,15 @@
         left: -24px;
         bottom: 0;
     }
-
     .member:last-child:after {
         height: 0;
     }
-
     .mess:nth-child(2n) {
         background: #f7f1f1;
     }
-
     div#rooms {
         /* border: 1px solid #ccc; */
     }
-
     div#rooms h3 {
         background: #ff0303;
         color: #fff;
@@ -325,38 +338,36 @@
         font-weight: normal;
         font-family: cursive;
     }
-
     .group_room {
         border: 1px solid #ccc;
         border-top: none;
         padding: 5px 10px;
     }
-
-    div.members h3 {
+    div.wsbox h3 {
         background: #ff0303;
         color: #fff;
         padding: 5px 10px;
         font-weight: normal;
         font-family: cursive;
     }
-
+    .group_roomMembers {
+        border: 1px solid #ccc;
+        padding: 5px 10px;
+    }
     .group_members {
         border: 1px solid #ccc;
         padding: 5px 10px;
     }
-
     .user {
         padding: 5px 0;
         overflow: hidden;
         line-height: 20px;
     }
-
     .room {
         padding: 5px 0;
         overflow: hidden;
         line-height: 20px;
     }
-
     a.button_join {
         display: inline-block;
         float: right;
@@ -367,13 +378,23 @@
         line-height: 20px;
         color: #fff;
     }
-
     a.button_join.hidden {
         opacity: 0;
         display: none;
         pointer-events: none;
     }
-
+    div#messages > div {
+        border-bottom: 1px solid #fff;
+    }
+    .wsbox.login h3 {
+        background: #0400ff;
+    }
+    .roomMembers.hidden {
+        display:none;
+    }
+    div {
+        word-break: break-all;
+    }
 </style>
 </body>
 </html>
